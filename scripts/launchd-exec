@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+{ set +x; } 2>/dev/null
+
+usage() {
+    echo "usage: $(basename $0) command [args ...]" 1>&2
+    [[ $1 == "-h" ]] || [[ $1 == "--help" ]]; exit
+}
+
+[[ $1 == "-h" ]] || [[ $1 == "--help" ]] && usage "$@"
+
+[[ $# == 0 ]] && usage
+
+command_id="$(echo $1 | sed -e 's/[^A-Za-z0-9._-]/_/g')"
+
+! [ -e "$1" ] && {
+    path="$(which "$1")" || exit
+    [[ -z "$path" ]] && echo "ERROR: $1 path not found" 1>&2 && exit 1
+    set -- "$path" "${@:2}"
+    ! [ -x "$path" ] && { chmod +x "$path" || exit; }
+}
+
+args="$(IFS=$'\n';echo "$*")"
+date="$(date "+%Y-%m-%d_%H-%M-%S")"
+dir=~/"Library/Logs/launchd-exec/$command_id/$date"
+Label="launchd-exec.$command_id.$date"
+plist="$dir/launchd.plist"
+out="$dir/out.log"
+err="$dir/err.log"
+mkdir -p "$dir" || exit
+
+set -- \
+    -c "Add Label string '$Label'" \
+    -c "Add RunAtLoad bool true" \
+    -c "Add StandardOutPath string $out" \
+    -c "Add StandardErrorPath string $err" \
+    -c "Add WorkingDirectory string '${1%/*}'" \
+    -c "Add ProgramArguments array"
+
+i=0
+while IFS= read arg; do
+    set -- "$@" -c "Add :ProgramArguments:$i string '$arg'"
+    ((i++))
+done <<< "$args"
+/usr/libexec/PlistBuddy "$@" "$plist" 1> /dev/null
+
+/bin/launchctl unload -w "$plist" 2> /dev/null
+/bin/launchctl load -F "$plist"
