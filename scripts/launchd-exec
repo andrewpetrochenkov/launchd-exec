@@ -21,7 +21,7 @@ command_id="$(echo $1 | sed -e 's/[^A-Za-z0-9._-]/_/g')"
 
 args="$(IFS=$'\n';echo "$*")"
 date="$(date "+%Y-%m-%d_%H-%M-%S")"
-dir=~/"Library/Logs/launchd-exec/$command_id/$date"
+dir=~/"Library/Logs/launchd-exec/$command_id/$date.$$"
 Label="launchd-exec.$command_id.$date"
 plist="$dir/launchd.plist"
 out="$dir/out.log"
