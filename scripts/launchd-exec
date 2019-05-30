@@ -10,8 +10,6 @@ usage() {
 
 [[ $# == 0 ]] && usage
 
-command_id="$(echo $1 | sed -e 's/[^A-Za-z0-9._-]/_/g')"
-
 ! [ -e "$1" ] && {
     path="$(which "$1")" || exit
     [[ -z "$path" ]] && echo "ERROR: $1 path not found" 1>&2 && exit 1
@@ -20,13 +18,16 @@ command_id="$(echo $1 | sed -e 's/[^A-Za-z0-9._-]/_/g')"
 }
 
 args="$(IFS=$'\n';echo "$*")"
-date="$(date "+%Y-%m-%d_%H-%M-%S")"
-dir=~/"Library/Logs/launchd-exec/$command_id/$date.$$"
-Label="launchd-exec.$command_id.$date"
+shasum="$(echo "$@" | shasum -a 1 | awk '{print $1}')"
+[[ -z "$shasum" ]] && echo "ERROR: shasum is EMPTY" 1>&2 && exit 1
+
+dir=~/"Library/Logs/launchd-exec/$shasum"
+Label="launchd-exec.$shasum"
 plist="$dir/launchd.plist"
 out="$dir/out.log"
 err="$dir/err.log"
 mkdir -p "$dir" || exit
+rm -f "$plist"
 
 set -- \
     -c "Add Label string '$Label'" \
@@ -45,3 +46,4 @@ done <<< "$args"
 
 /bin/launchctl unload -w "$plist" 2> /dev/null
 /bin/launchctl load -F "$plist"
+echo "$Label"

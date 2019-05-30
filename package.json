@@ -1,6 +1,6 @@
 {
   "name": "launchd-exec",
-  "version": "2019.3.22",
+  "version": "2019.5.30",
   "description": "execute script via launchd and log stdout, stderr",
   "keywords": [
     "launchd",
